@@ -1,98 +1,166 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>JS Info Disclosure Scanner</title>
-  <style>
-    :root {
-      --primary: #0f172a;
-      --secondary: #1e293b;
-      --accent: #38bdf8;
-      --danger: #f43f5e;
-      --success: #22c55e;
+<?php
+ini_set('max_execution_time', 900);
+error_reporting(0);
+ob_implicit_flush(true);
+
+function strip_carriage_returns($string) {
+    return str_replace(["\n\r", "\n", "\r"], '', $string);
+}
+
+function GetBetween($content,$start,$end){
+    $r = explode($start, $content);
+    if (isset($r[1])){
+        $r = explode($end, $r[1]);
+        return $r[0];
+    }
+    return '';
+}
+
+function forceFlush() {
+    ob_start(); 
+    ob_end_clean(); 
+    flush(); 
+    ob_end_flush(); 
+}
+
+function scanFile($content, $filename) {
+    echo "<div class='card'>";
+    echo "<h3>🔍 $filename</h3>";
+
+    $patterns = [
+        '/(api_key\s*[:=]\s*[\'"][a-z0-9_\-]{16,}[\'"])/i',
+        '/(apikey\s*[:=]\s*[\'"][a-z0-9_\-]{16,}[\'"])/i',
+        '/(apiKey\s*[:=]\s*[\'"][a-z0-9_\-]{16,}[\'"])/i',
+        '/(secret\s*[:=]\s*[\'"][a-z0-9_\-]{16,}[\'"])/i',
+        '/(accessKeyId\s*[:=]\s*[\'"]AKIA[a-zA-Z0-9]{16}[\'"])/',
+        '/(secretAccessKey\s*[:=]\s*[\'"][a-zA-Z0-9\/+=]{40,}[\'"])/',
+        '/(password\s*[:=]\s*[\'"].{6,}[\'"])/i',
+        '/(Authorization\s*[:=]\s*[\'"]Bearer\s+[a-zA-Z0-9\._\-]+[\'"])/i',
+        '/(firebaseConfig\s*[:=]\s*{)/i',
+        '/(jwt.*secret\s*[:=]\s*[\'"].+?[\'"])/i',
+        '/(url\s*[:=]\s*[\'"]\/[a-z0-9\/\-\_\?&=]+[\'"])/i'
+    ];
+
+    $found = false;
+    foreach ($patterns as $regex) {
+        if (preg_match_all($regex, $content, $matches)) {
+            foreach ($matches[0] as $match) {
+                echo "<div class='result'>⚠️ ".htmlentities($match)."</div>";
+                $found = true;
+            }
+        }
     }
 
+    if (!$found) {
+        echo "<div class='result safe'>✅ Tidak ditemukan indikasi info sensitif.</div>";
+    }
+
+    echo "</div>";
+    forceFlush();
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['jsfile'])) {
+    $file = $_FILES['jsfile'];
+    if ($file['type'] === "application/javascript" || str_ends_with($file['name'], '.js')) {
+        $content = file_get_contents($file['tmp_name']);
+        ?>
+        <!doctype html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>JS Scanner - Results</title>
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+            <style>
+                body { font-family: 'Inter', sans-serif; background: #f4f4f4; padding: 30px; color: #333; }
+                .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+                .result { padding: 6px 10px; background: #fff6e6; border-left: 4px solid #ffa500; margin: 5px 0; border-radius: 6px; }
+                .result.safe { background: #e8f5e9; border-left-color: #4caf50; }
+                h3 { margin-bottom: 10px; }
+                a.back { display: inline-block; margin-top: 20px; color: #007BFF; text-decoration: none; }
+                a.back:hover { text-decoration: underline; }
+            </style>
+        </head>
+        <body>
+        <h2>📄 Scan Result</h2>
+        <?php scanFile($content, htmlentities($file['name'])); ?>
+        <a class="back" href="index.php">⬅️ Kembali</a>
+        </body>
+        </html>
+        <?php
+        exit;
+    } else {
+        echo "File bukan .js!";
+        exit;
+    }
+}
+?>
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>JS Info Disclosure Scanner</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
     body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background-color: var(--primary);
-      color: #f1f5f9;
+      font-family: 'Inter', sans-serif;
+      background-color: #f9f9f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+      padding: 20px;
     }
 
     .container {
-      max-width: 800px;
-      margin: 60px auto;
-      background-color: var(--secondary);
+      background-color: white;
       padding: 30px 40px;
-      border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      text-align: center;
+      max-width: 500px;
     }
 
     h1 {
-      color: var(--accent);
-      margin-bottom: 10px;
-    }
-
-    p {
-      color: #cbd5e1;
+      margin-bottom: 20px;
+      font-size: 26px;
     }
 
     input[type="file"] {
-      margin-top: 20px;
+      padding: 10px;
+      font-size: 16px;
     }
 
     button {
-      margin-top: 10px;
+      margin-top: 20px;
       padding: 10px 20px;
-      background-color: var(--accent);
+      font-size: 16px;
+      border-radius: 8px;
       border: none;
-      border-radius: 6px;
+      background-color: #3b82f6;
       color: white;
-      font-weight: bold;
       cursor: pointer;
+      transition: background 0.3s;
     }
 
     button:hover {
-      background-color: #0ea5e9;
+      background-color: #2563eb;
     }
 
-    .output {
-      margin-top: 30px;
-      padding: 20px;
-      background-color: #0f172a;
-      border-left: 4px solid var(--accent);
-      border-radius: 8px;
-      white-space: pre-wrap;
-      overflow-x: auto;
-    }
-
-    .section-title {
-      color: var(--accent);
-      font-size: 1.1em;
+    #loader {
+      display: none;
       margin-top: 20px;
-    }
-
-    .leak {
-      color: var(--danger);
-    }
-
-    .url {
-      color: var(--success);
     }
 
     .spinner {
-      margin-top: 20px;
-      border: 6px solid #1e293b;
-      border-top: 6px solid var(--accent);
-      border-radius: 50%;
       width: 40px;
       height: 40px;
+      border: 5px solid #ddd;
+      border-top: 5px solid #3b82f6;
+      border-radius: 50%;
       animation: spin 1s linear infinite;
-      display: none;
-      margin-left: auto;
-      margin-right: auto;
+      margin: auto;
     }
 
     @keyframes spin {
@@ -102,111 +170,23 @@
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>🔍 JS Info Disclosure Scanner</h1>
-    <p>Upload file <code>.js</code> untuk mencari informasi sensitif seperti API keys, password, token, dan endpoint.</p>
-
-    <input type="file" id="fileInput" accept=".js" />
-    <button onclick="scanFile()">🔎 Scan File</button>
-
-    <div class="spinner" id="spinner"></div>
-    <div id="output" class="output"></div>
+<div class="container">
+  <h1>🔐 JS Info Disclosure Scanner</h1>
+  <form id="scanForm" method="POST" enctype="multipart/form-data">
+    <input type="file" name="jsfile" accept=".js" required>
+    <br>
+    <button type="submit">🔎 Scan Sekarang</button>
+  </form>
+  <div id="loader">
+    <div class="spinner"></div>
+    <p>Sedang menganalisis file...</p>
   </div>
+</div>
 
-  <script>
-    function scanFile() {
-      const fileInput = document.getElementById("fileInput");
-      const output = document.getElementById("output");
-      const spinner = document.getElementById("spinner");
-
-      output.innerHTML = "";
-      spinner.style.display = "block";
-
-      if (!fileInput.files.length) {
-        spinner.style.display = "none";
-        output.textContent = "⚠️ Silakan upload file JS terlebih dahulu.";
-        return;
-      }
-
-      const file = fileInput.files[0];
-      const reader = new FileReader();
-
-      reader.onload = function (e) {
-        const content = e.target.result;
-
-        const urlRegex1 = /url:"\/(.*?)"/g;
-        const urlRegex2 = /url:'\/(.*?)'/g;
-
-        const sensitivePatterns = [
-          { label: "Password", regex: /password\s*[:=]\s*["'][^"']+["']/gi },
-          { label: "API Key", regex: /api[_-]?key\s*[:=]\s*["'][^"']+["']/gi },
-          { label: "Token", regex: /token\s*[:=]\s*["'][^"']+["']/gi },
-          { label: "Access Token", regex: /access[_-]?token\s*[:=]\s*["'][^"']+["']/gi },
-          { label: "Client Secret", regex: /client[_-]?secret\s*[:=]\s*["'][^"']+["']/gi },
-          { label: "Secret", regex: /secret\s*[:=]\s*["'][^"']+["']/gi },
-          { label: "Private Key", regex: /private[_-]?key\s*[:=]\s*["'][^"']+["']/gi },
-          { label: "Authorization", regex: /authorization\s*[:=]\s*["'][^"']+["']/gi },
-          { label: "Bearer Token", regex: /Bearer\s+[A-Za-z0-9\-_.=]+/gi },
-          { label: "Config Block", regex: /config\s*[:=]\s*{[^}]+}/gi },
-          { label: "AWS Access Key", regex: /aws_access_key_id\s*[:=]\s*["'][^"']+["']/gi },
-          { label: "AWS Secret Key", regex: /aws_secret_access_key\s*[:=]\s*["'][^"']+["']/gi },
-          { label: "Firebase", regex: /firebase.*?["'][^"']+["']/gi },
-          { label: "Mailgun Key", regex: /mailgun.*?key\s*[:=]\s*["'][^"']+["']/gi },
-          { label: "Twilio Key", regex: /twilio.*?key\s*[:=]\s*["'][^"']+["']/gi },
-          { label: "SendGrid Key", regex: /sendgrid.*?key\s*[:=]\s*["'][^"']+["']/gi },
-          { label: "Consumer Key", regex: /consumer_key\s*[:=]\s*["'][^"']+["']/gi },
-          { label: "Consumer Secret", regex: /consumer_secret\s*[:=]\s*["'][^"']+["']/gi },
-          { label: "Base URL", regex: /base(url)?\s*[:=]\s*["'][^"']+["']/gi },
-          { label: "API URL", regex: /api(url)?\s*[:=]\s*["'][^"']+["']/gi },
-          { label: "Endpoint", regex: /endpoint\s*[:=]\s*["'][^"']+["']/gi },
-          { label: "Database URL", regex: /database[_-]?url\s*[:=]\s*["'][^"']+["']/gi },
-          { label: "DB URI", regex: /db[_-]?uri\s*[:=]\s*["'][^"']+["']/gi },
-          { label: "Host", regex: /host\s*[:=]\s*["'][^"']+["']/gi },
-          { label: "Port", regex: /port\s*[:=]\s*["']?\d{2,5}["']?/gi },
-          { label: "SMTP", regex: /smtp\s*[:=]\s*["'][^"']+["']/gi },
-          { label: "IMAP", regex: /imap\s*[:=]\s*["'][^"']+["']/gi },
-        ];
-
-        let result = "";
-
-        const urls = new Set();
-        let match;
-        while ((match = urlRegex1.exec(content)) !== null) {
-          urls.add(`url:"/${match[1]}"`);
-        }
-        while ((match = urlRegex2.exec(content)) !== null) {
-          urls.add(`url:'/${match[1]}'`);
-        }
-
-        if (urls.size > 0) {
-          result += `<div class="section-title">📁 URL ditemukan:</div>`;
-          urls.forEach(u => {
-            result += `<div class="url">✅ ${u}</div>`;
-          });
-        }
-
-        result += `<div class="section-title">🕵️ Info Disclosure Ditemukan:</div>`;
-        let leaksFound = false;
-        sensitivePatterns.forEach(({ label, regex }) => {
-          const matches = content.match(regex);
-          if (matches) {
-            leaksFound = true;
-            matches.forEach((line) => {
-              result += `<div class="leak">🔴 ${label}: ${line}</div>`;
-            });
-          }
-        });
-
-        if (!leaksFound) {
-          result += `✅ Tidak ada info sensitif ditemukan.`;
-        }
-
-        output.innerHTML = result;
-        spinner.style.display = "none";
-      };
-
-      reader.readAsText(file);
-    }
-  </script>
+<script>
+  document.getElementById('scanForm').addEventListener('submit', function() {
+    document.getElementById('loader').style.display = 'block';
+  });
+</script>
 </body>
 </html>
