@@ -1,168 +1,60 @@
-<?php
-ini_set('max_execution_time', 900);
-error_reporting(0);
-ob_implicit_flush(true);
-
-function strip_carriage_returns($string) {
-    return str_replace(["\n\r", "\n", "\r"], '', $string);
-}
-
-function GetBetween($content,$start,$end){
-    $r = explode($start, $content);
-    if (isset($r[1])){
-        $r = explode($end, $r[1]);
-        return $r[0];
-    }
-    return '';
-}
-
-function forceFlush() {
-    ob_start(); 
-    ob_end_clean(); 
-    flush(); 
-    ob_end_flush(); 
-}
-
-function scanFile($content, $filename) {
-    echo "<div class='card'>";
-    echo "<h3>🔍 $filename</h3>";
-
-    $patterns = [
-        '/(api_key\s*[:=]\s*[\'"][a-z0-9_\-]{16,}[\'"])/i',
-        '/(apikey\s*[:=]\s*[\'"][a-z0-9_\-]{16,}[\'"])/i',
-        '/(apiKey\s*[:=]\s*[\'"][a-z0-9_\-]{16,}[\'"])/i',
-        '/(secret\s*[:=]\s*[\'"][a-z0-9_\-]{16,}[\'"])/i',
-        '/(accessKeyId\s*[:=]\s*[\'"]AKIA[a-zA-Z0-9]{16}[\'"])/',
-        '/(secretAccessKey\s*[:=]\s*[\'"][a-zA-Z0-9\/+=]{40,}[\'"])/',
-        '/(password\s*[:=]\s*[\'"].{6,}[\'"])/i',
-        '/(Authorization\s*[:=]\s*[\'"]Bearer\s+[a-zA-Z0-9\._\-]+[\'"])/i',
-        '/(firebaseConfig\s*[:=]\s*{)/i',
-        '/(jwt.*secret\s*[:=]\s*[\'"].+?[\'"])/i',
-        '/(url\s*[:=]\s*[\'"]\/[a-z0-9\/\-\_\?&=]+[\'"])/i'
-    ];
-
-    $found = false;
-    foreach ($patterns as $regex) {
-        if (preg_match_all($regex, $content, $matches)) {
-            foreach ($matches[0] as $match) {
-                echo "<div class='result'>⚠️ ".htmlentities($match)."</div>";
-                $found = true;
-            }
-        }
-    }
-
-    if (!$found) {
-        echo "<div class='result safe'>✅ Tidak ditemukan indikasi info sensitif.</div>";
-    }
-
-    echo "</div>";
-    forceFlush();
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['jsfile'])) {
-    $file = $_FILES['jsfile'];
-    if ($file['type'] === "application/javascript" || str_ends_with($file['name'], '.js')) {
-        $content = file_get_contents($file['tmp_name']);
-        ?>
-        <!doctype html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <title>JS Scanner - Results</title>
-            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-            <style>
-                body { font-family: 'Inter', sans-serif; background: #f4f4f4; padding: 30px; color: #333; }
-                .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-                .result { padding: 6px 10px; background: #fff6e6; border-left: 4px solid #ffa500; margin: 5px 0; border-radius: 6px; }
-                .result.safe { background: #e8f5e9; border-left-color: #4caf50; }
-                h3 { margin-bottom: 10px; }
-                a.back { display: inline-block; margin-top: 20px; color: #007BFF; text-decoration: none; }
-                a.back:hover { text-decoration: underline; }
-            </style>
-        </head>
-        <body>
-        <h2>📄 Scan Result</h2>
-        <?php scanFile($content, htmlentities($file['name'])); ?>
-        <a class="back" href="index.php">⬅️ Kembali</a>
-        </body>
-        </html>
-        <?php
-        exit;
-    } else {
-        echo "File bukan .js!";
-        exit;
-    }
-}
-?>
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>JS Info Disclosure Scanner</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <title>🔍 JavaScript Info Disclosure Scanner</title>
   <style>
     body {
-      font-family: 'Inter', sans-serif;
-      background-color: #f9f9f9;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      flex-direction: column;
-      padding: 20px;
+      font-family: 'Segoe UI', sans-serif;
+      background: #1e1e1e;
+      color: #eee;
+      padding: 30px;
     }
-
     .container {
-      background-color: white;
-      padding: 30px 40px;
-      border-radius: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      text-align: center;
-      max-width: 500px;
-    }
-
-    h1 {
-      margin-bottom: 20px;
-      font-size: 26px;
-    }
-
-    input[type="file"] {
-      padding: 10px;
-      font-size: 16px;
-    }
-
-    button {
-      margin-top: 20px;
-      padding: 10px 20px;
-      font-size: 16px;
-      border-radius: 8px;
-      border: none;
-      background-color: #3b82f6;
-      color: white;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-
-    button:hover {
-      background-color: #2563eb;
-    }
-
-    #loader {
-      display: none;
-      margin-top: 20px;
-    }
-
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border: 5px solid #ddd;
-      border-top: 5px solid #3b82f6;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
+      max-width: 800px;
       margin: auto;
+      background: #2a2a2a;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #000;
     }
-
+    h1 {
+      text-align: center;
+      color: #46ff06;
+    }
+    input[type="file"] {
+      background: #333;
+      border: none;
+      padding: 10px;
+      border-radius: 5px;
+      color: white;
+    }
+    #output {
+      margin-top: 20px;
+      background: #111;
+      padding: 15px;
+      border-radius: 5px;
+      white-space: pre-wrap;
+    }
+    .match {
+      background: #333;
+      padding: 10px;
+      margin: 8px 0;
+      border-left: 4px solid #46ff06;
+    }
+    .match code {
+      color: #8affff;
+    }
+    .loader {
+      display: none;
+      margin: 10px auto;
+      border: 4px solid #555;
+      border-top: 4px solid #46ff06;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+    }
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
@@ -170,23 +62,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['jsfile'])) {
   </style>
 </head>
 <body>
-<div class="container">
-  <h1>🔐 JS Info Disclosure Scanner</h1>
-  <form id="scanForm" method="POST" enctype="multipart/form-data">
-    <input type="file" name="jsfile" accept=".js" required>
-    <br>
-    <button type="submit">🔎 Scan Sekarang</button>
-  </form>
-  <div id="loader">
-    <div class="spinner"></div>
-    <p>Sedang menganalisis file...</p>
+  <div class="container">
+    <h1>🔍 JS Info Disclosure Scanner</h1>
+    <input type="file" id="upload" accept=".js">
+    <div class="loader" id="loader"></div>
+    <div id="output"></div>
   </div>
-</div>
 
-<script>
-  document.getElementById('scanForm').addEventListener('submit', function() {
-    document.getElementById('loader').style.display = 'block';
-  });
-</script>
+  <script>
+    const patterns = [
+      { name: "API Key", regex: /(?<![\w])api[_-]?key['"]?\s*[:=]\s*['"]?[A-Za-z0-9_\-]{16,}['"]?/gi },
+      { name: "Access Token", regex: /access[_-]?token['"]?\s*[:=]\s*['"]?[A-Za-z0-9\-_.=]{16,}['"]?/gi },
+      { name: "JWT", regex: /eyJ[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+/g },
+      { name: "AWS Access Key", regex: /AKIA[0-9A-Z]{16}/g },
+      { name: "AWS Secret Key", regex: /(?:aws)?[_-]?secret['"]?\s*[:=]\s*['"]?[A-Za-z0-9\/+=]{40}['"]?/gi },
+      { name: "Google API Key", regex: /AIza[0-9A-Za-z\-_]{35}/g },
+      { name: "Firebase Config", regex: /firebaseConfig\s*=\s*{[\s\S]*?}/gi },
+      { name: "Stripe Key", regex: /(sk|pk)_(live|test)_[0-9a-zA-Z]{20,}/g },
+      { name: "SendGrid Key", regex: /SG\.[A-Za-z0-9._-]{10,}/g },
+      { name: "Hardcoded Password", regex: /password['"]?\s*[:=]\s*['"][^'"]{4,}['"]/gi },
+      { name: "DB URI", regex: /(mongodb|postgres|mysql):\/\/[^\s'"]+/gi },
+      { name: "Base64 String", regex: /['"]?[A-Za-z0-9+/=]{40,}['"]?/g },
+      { name: "Internal URL", regex: /url\s*[:=]\s*["']\/[a-z0-9\/\?\=\&\-_\.]+["']/gi },
+      { name: "HTTP URL", regex: /https?:\/\/[^\s"'<>]+/gi },
+      { name: "Suspicious Variable", regex: /\b(var|let|const)\s+[_$a-zA-Z0-9]{1,8}\s*=\s*['"][A-Za-z0-9+\/=]{30,}['"]/g },
+      { name: "Suspicious Comment", regex: /\/\/\s*(key|secret|token|auth|pass|private)[^\n]*/gi }
+    ];
+
+    document.getElementById('upload').addEventListener('change', async function () {
+      const file = this.files[0];
+      const output = document.getElementById("output");
+      const loader = document.getElementById("loader");
+      output.innerHTML = '';
+      loader.style.display = "block";
+
+      const text = await file.text();
+      const results = [];
+
+      for (const { name, regex } of patterns) {
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+          results.push({ name, match: match[0] });
+        }
+      }
+
+      loader.style.display = "none";
+
+      if (results.length === 0) {
+        output.innerHTML = "<i>✅ Aman! Tidak ditemukan informasi sensitif.</i>";
+      } else {
+        results.forEach(result => {
+          output.innerHTML += `<div class="match"><strong>${result.name}</strong>: <code>${result.match}</code></div>`;
+        });
+      }
+    });
+  </script>
 </body>
 </html>
