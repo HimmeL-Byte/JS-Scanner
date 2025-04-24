@@ -2,120 +2,143 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>🔍 JavaScript Info Disclosure Scanner</title>
+  <title>JS Obfuscation Scanner</title>
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #1e1e1e;
+      font-family: monospace;
+      background-color: #1e1e1e;
       color: #eee;
       padding: 30px;
     }
     .container {
-      max-width: 800px;
+      max-width: 960px;
       margin: auto;
-      background: #2a2a2a;
-      padding: 30px;
+      background: #2b2b2b;
+      padding: 25px;
       border-radius: 10px;
-      box-shadow: 0 0 10px #000;
     }
-    h1 {
-      text-align: center;
-      color: #46ff06;
-    }
+    h2 { color: #46ff06; }
     input[type="file"] {
-      background: #333;
-      border: none;
+      background: #444;
       padding: 10px;
-      border-radius: 5px;
+      margin: 10px 0;
       color: white;
-    }
-    #output {
-      margin-top: 20px;
-      background: #111;
-      padding: 15px;
-      border-radius: 5px;
-      white-space: pre-wrap;
+      border: none;
     }
     .match {
       background: #333;
+      border-left: 5px solid #46ff06;
       padding: 10px;
-      margin: 8px 0;
-      border-left: 4px solid #46ff06;
-    }
-    .match code {
-      color: #8affff;
+      margin: 10px 0;
     }
     .loader {
       display: none;
-      margin: 10px auto;
-      border: 4px solid #555;
+      margin: 15px auto;
+      width: 30px;
+      height: 30px;
+      border: 4px solid #444;
       border-top: 4px solid #46ff06;
       border-radius: 50%;
-      width: 24px;
-      height: 24px;
       animation: spin 1s linear infinite;
     }
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+    code {
+      background: #1e1e1e;
+      padding: 2px 5px;
+      border-radius: 4px;
+      color: #ffd700;
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>🔍 JS Info Disclosure Scanner</h1>
-    <input type="file" id="upload" accept=".js">
-    <div class="loader" id="loader"></div>
-    <div id="output"></div>
-  </div>
+<div class="container">
+  <h2>🧪 Obfuscated JS Scanner</h2>
+  <input type="file" id="fileInput" accept=".js">
+  <div class="loader" id="loader"></div>
+  <div id="output"></div>
+</div>
 
-  <script>
-    const patterns = [
-      { name: "API Key", regex: /(?<![\w])api[_-]?key['"]?\s*[:=]\s*['"]?[A-Za-z0-9_\-]{16,}['"]?/gi },
-      { name: "Access Token", regex: /access[_-]?token['"]?\s*[:=]\s*['"]?[A-Za-z0-9\-_.=]{16,}['"]?/gi },
-      { name: "JWT", regex: /eyJ[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+/g },
-      { name: "AWS Access Key", regex: /AKIA[0-9A-Z]{16}/g },
-      { name: "AWS Secret Key", regex: /(?:aws)?[_-]?secret['"]?\s*[:=]\s*['"]?[A-Za-z0-9\/+=]{40}['"]?/gi },
-      { name: "Google API Key", regex: /AIza[0-9A-Za-z\-_]{35}/g },
-      { name: "Firebase Config", regex: /firebaseConfig\s*=\s*{[\s\S]*?}/gi },
-      { name: "Stripe Key", regex: /(sk|pk)_(live|test)_[0-9a-zA-Z]{20,}/g },
-      { name: "SendGrid Key", regex: /SG\.[A-Za-z0-9._-]{10,}/g },
-      { name: "Hardcoded Password", regex: /password['"]?\s*[:=]\s*['"][^'"]{4,}['"]/gi },
-      { name: "DB URI", regex: /(mongodb|postgres|mysql):\/\/[^\s'"]+/gi },
-      { name: "Base64 String", regex: /['"]?[A-Za-z0-9+/=]{40,}['"]?/g },
-      { name: "Internal URL", regex: /url\s*[:=]\s*["']\/[a-z0-9\/\?\=\&\-_\.]+["']/gi },
-      { name: "HTTP URL", regex: /https?:\/\/[^\s"'<>]+/gi },
-      { name: "Suspicious Variable", regex: /\b(var|let|const)\s+[_$a-zA-Z0-9]{1,8}\s*=\s*['"][A-Za-z0-9+\/=]{30,}['"]/g },
-      { name: "Suspicious Comment", regex: /\/\/\s*(key|secret|token|auth|pass|private)[^\n]*/gi }
-    ];
+<script>
+const patterns = [
+  { name: "API Key", regex: /api[_-]?key['"]?\s*[:=]\s*['"`]?[A-Za-z0-9_\-]{16,}['"`]?/gi },
+  { name: "Access Token", regex: /access[_-]?token['"]?\s*[:=]\s*['"`]?[A-Za-z0-9\-_.=]{16,}['"`]?/gi },
+  { name: "JWT", regex: /eyJ[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+/g },
+  { name: "AWS Key", regex: /AKIA[0-9A-Z]{16}/g },
+  { name: "AWS Secret", regex: /['"`][A-Za-z0-9\/+=]{40}['"`]/g },
+  { name: "Stripe Key", regex: /(sk|pk)_(live|test)_[0-9a-zA-Z]{20,}/g },
+  { name: "Hardcoded Password", regex: /password['"]?\s*[:=]\s*['"`][^'"`]{4,}['"`]/gi },
+  { name: "Secret", regex: /secret['"]?\s*[:=]\s*['"`][^'"`]+/gi },
+  { name: "Base64 Encoded", regex: /['"][A-Za-z0-9+/=]{32,}['"]/g },
+  { name: "Firebase Config", regex: /firebaseConfig\s*=\s*{[\s\S]*?}/gi },
+  { name: "Internal URL", regex: /url\s*[:=]\s*["']\/[a-z0-9\/\?\=\&\-_\.]+["']/gi }
+];
 
-    document.getElementById('upload').addEventListener('change', async function () {
-      const file = this.files[0];
-      const output = document.getElementById("output");
-      const loader = document.getElementById("loader");
-      output.innerHTML = '';
-      loader.style.display = "block";
+function decodeHex(str) {
+  return str.replace(/\\x([0-9A-Fa-f]{2})/g, (_, hex) =>
+    String.fromCharCode(parseInt(hex, 16))
+  );
+}
 
-      const text = await file.text();
-      const results = [];
+function extractConcatenatedStrings(str) {
+  return str.replace(/(['"`])([^'"`]+?)\1\s*\+\s*\1([^'"`]+?)\1/g, (_, q, a, b) => q + a + b + q);
+}
 
-      for (const { name, regex } of patterns) {
-        let match;
-        while ((match = regex.exec(text)) !== null) {
-          results.push({ name, match: match[0] });
-        }
-      }
+function extractAtobStrings(str) {
+  const b64Regex = /atob\s*\(\s*['"`]([A-Za-z0-9+/=]{32,})['"`]\s*\)/gi;
+  let decoded = str;
+  let match;
+  while ((match = b64Regex.exec(str)) !== null) {
+    try {
+      decoded += "\n" + atob(match[1]);
+    } catch (e) {}
+  }
+  return decoded;
+}
 
-      loader.style.display = "none";
+function scanContent(originalContent) {
+  const decodedHex = decodeHex(originalContent);
+  const concatMerged = extractConcatenatedStrings(decodedHex);
+  const withAtobDecoded = extractAtobStrings(concatMerged);
 
-      if (results.length === 0) {
-        output.innerHTML = "<i>✅ Aman! Tidak ditemukan informasi sensitif.</i>";
-      } else {
-        results.forEach(result => {
-          output.innerHTML += `<div class="match"><strong>${result.name}</strong>: <code>${result.match}</code></div>`;
-        });
+  const scanTargets = [originalContent, decodedHex, concatMerged, withAtobDecoded];
+  const found = [];
+
+  scanTargets.forEach(scanText => {
+    patterns.forEach(({ name, regex }) => {
+      let match;
+      while ((match = regex.exec(scanText)) !== null) {
+        found.push({ name, value: match[0] });
       }
     });
-  </script>
+  });
+
+  return found;
+}
+
+document.getElementById("fileInput").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  const loader = document.getElementById("loader");
+  const output = document.getElementById("output");
+
+  output.innerHTML = '';
+  loader.style.display = 'block';
+
+  const text = await file.text();
+  const matches = scanContent(text);
+
+  loader.style.display = 'none';
+
+  if (matches.length === 0) {
+    output.innerHTML = "<p>✅ Tidak ditemukan informasi sensitif dalam file JS.</p>";
+  } else {
+    matches.forEach(m => {
+      output.innerHTML += `<div class="match"><b>${m.name}</b>: <code>${m.value}</code></div>`;
+    });
+  }
+});
+</script>
 </body>
 </html>
