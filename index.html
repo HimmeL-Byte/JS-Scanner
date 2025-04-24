@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>JS Info Disclosure Scanner By HimmeL-Byte</title>
+  <style>
+    :root {
+      --primary: #0f172a;
+      --secondary: #1e293b;
+      --accent: #38bdf8;
+      --danger: #f43f5e;
+      --success: #22c55e;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--primary);
+      color: #f1f5f9;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 60px auto;
+      background-color: var(--secondary);
+      padding: 30px 40px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+    }
+
+    h1 {
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+
+    p {
+      color: #cbd5e1;
+    }
+
+    input[type="file"] {
+      margin-top: 20px;
+    }
+
+    button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      background-color: var(--accent);
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0ea5e9;
+    }
+
+    .output {
+      margin-top: 30px;
+      padding: 20px;
+      background-color: #0f172a;
+      border-left: 4px solid var(--accent);
+      border-radius: 8px;
+      white-space: pre-wrap;
+      overflow-x: auto;
+    }
+
+    .section-title {
+      color: var(--accent);
+      font-size: 1.1em;
+      margin-top: 20px;
+    }
+
+    .leak {
+      color: var(--danger);
+    }
+
+    .url {
+      color: var(--success);
+    }
+
+    .spinner {
+      margin-top: 20px;
+      border: 6px solid #1e293b;
+      border-top: 6px solid var(--accent);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      display: none;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 JS Info Disclosure Scanner By HimmeL-Byte</h1>
+    <p>Upload file <code>.js</code> dan alat ini akan mencari informasi sensitif seperti API keys, password, token, dan URL internal.</p>
+
+    <input type="file" id="fileInput" accept=".js" />
+    <button onclick="scanFile()">🔎 Scan File</button>
+
+    <div class="spinner" id="spinner"></div>
+    <div id="output" class="output"></div>
+  </div>
+
+  <script>
+    function scanFile() {
+      const fileInput = document.getElementById("fileInput");
+      const output = document.getElementById("output");
+      const spinner = document.getElementById("spinner");
+
+      output.innerHTML = "";
+      spinner.style.display = "block";
+
+      if (!fileInput.files.length) {
+        spinner.style.display = "none";
+        output.textContent = "⚠ Silakan upload file JS terlebih dahulu.";
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+
+      reader.onload = function (e) {
+        const content = e.target.result;
+
+        // URL patterns
+        const urlRegex1 = /url:"\/(.*?)"/g;
+        const urlRegex2 = /url:'\/(.*?)'/g;
+
+        // Info disclosure patterns
+        const sensitivePatterns = [
+          { label: "Password", regex: /password\s*[:=]\s*["'][^"']+["']/gi },
+          { label: "API Key", regex: /api[_-]?key\s*[:=]\s*["'][^"']+["']/gi },
+          { label: "Token", regex: /token\s*[:=]\s*["'][^"']+["']/gi },
+          { label: "Secret", regex: /secret\s*[:=]\s*["'][^"']+["']/gi },
+          { label: "Auth", regex: /auth\s*[:=]\s*["'][^"']+["']/gi },
+          { label: "Config Block", regex: /config\s*[:=]\s*{[^}]+}/gi },
+        ];
+
+        let result = "";
+
+        // Collect URLs
+        const urls = new Set();
+        let match;
+        while ((match = urlRegex1.exec(content)) !== null) {
+          urls.add(`url:"/${match[1]}"`);
+        }
+        while ((match = urlRegex2.exec(content)) !== null) {
+          urls.add(`url:'/${match[1]}'`);
+        }
+
+        if (urls.size > 0) {
+          result += `<div class="section-title">📁 URL ditemukan:</div>`;
+          urls.forEach(u => {
+            result += `<div class="url">✅ ${u}</div>`;
+          });
+        }
+
+        // Info Disclosure
+        let leaksFound = false;
+        result += `<div class="section-title">🕵 Info Disclosure Ditemukan:</div>`;
+        sensitivePatterns.forEach(({ label, regex }) => {
+          const matches = content.match(regex);
+          if (matches) {
+            leaksFound = true;
+            matches.forEach((line) => {
+              result += `<div class="leak">🔴 ${label}: ${line}</div>`;
+            });
+          }
+        });
+
+        if (!leaksFound) {
+          result += `✅ Tidak ada info sensitif ditemukan.`;
+        }
+
+        output.innerHTML = result;
+        spinner.style.display = "none";
+      };
+
+      reader.readAsText(file);
+    }
+  </script>
+</body>
+</html>
