@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>JS Info Disclosure Scanner By HimmeL-Byte</title>
+  <title>JS Info Disclosure Scanner</title>
   <style>
     :root {
       --primary: #0f172a;
@@ -103,8 +103,8 @@
 </head>
 <body>
   <div class="container">
-    <h1>🔍 JS Info Disclosure Scanner By HimmeL-Byte</h1>
-    <p>Upload file <code>.js</code> dan alat ini akan mencari informasi sensitif seperti API keys, password, token, dan URL internal.</p>
+    <h1>🔍 JS Info Disclosure Scanner</h1>
+    <p>Upload file <code>.js</code> untuk mencari informasi sensitif seperti API keys, password, token, dan endpoint.</p>
 
     <input type="file" id="fileInput" accept=".js" />
     <button onclick="scanFile()">🔎 Scan File</button>
@@ -124,7 +124,7 @@
 
       if (!fileInput.files.length) {
         spinner.style.display = "none";
-        output.textContent = "⚠ Silakan upload file JS terlebih dahulu.";
+        output.textContent = "⚠️ Silakan upload file JS terlebih dahulu.";
         return;
       }
 
@@ -134,23 +134,41 @@
       reader.onload = function (e) {
         const content = e.target.result;
 
-        // URL patterns
         const urlRegex1 = /url:"\/(.*?)"/g;
         const urlRegex2 = /url:'\/(.*?)'/g;
 
-        // Info disclosure patterns
         const sensitivePatterns = [
           { label: "Password", regex: /password\s*[:=]\s*["'][^"']+["']/gi },
           { label: "API Key", regex: /api[_-]?key\s*[:=]\s*["'][^"']+["']/gi },
           { label: "Token", regex: /token\s*[:=]\s*["'][^"']+["']/gi },
+          { label: "Access Token", regex: /access[_-]?token\s*[:=]\s*["'][^"']+["']/gi },
+          { label: "Client Secret", regex: /client[_-]?secret\s*[:=]\s*["'][^"']+["']/gi },
           { label: "Secret", regex: /secret\s*[:=]\s*["'][^"']+["']/gi },
-          { label: "Auth", regex: /auth\s*[:=]\s*["'][^"']+["']/gi },
+          { label: "Private Key", regex: /private[_-]?key\s*[:=]\s*["'][^"']+["']/gi },
+          { label: "Authorization", regex: /authorization\s*[:=]\s*["'][^"']+["']/gi },
+          { label: "Bearer Token", regex: /Bearer\s+[A-Za-z0-9\-_.=]+/gi },
           { label: "Config Block", regex: /config\s*[:=]\s*{[^}]+}/gi },
+          { label: "AWS Access Key", regex: /aws_access_key_id\s*[:=]\s*["'][^"']+["']/gi },
+          { label: "AWS Secret Key", regex: /aws_secret_access_key\s*[:=]\s*["'][^"']+["']/gi },
+          { label: "Firebase", regex: /firebase.*?["'][^"']+["']/gi },
+          { label: "Mailgun Key", regex: /mailgun.*?key\s*[:=]\s*["'][^"']+["']/gi },
+          { label: "Twilio Key", regex: /twilio.*?key\s*[:=]\s*["'][^"']+["']/gi },
+          { label: "SendGrid Key", regex: /sendgrid.*?key\s*[:=]\s*["'][^"']+["']/gi },
+          { label: "Consumer Key", regex: /consumer_key\s*[:=]\s*["'][^"']+["']/gi },
+          { label: "Consumer Secret", regex: /consumer_secret\s*[:=]\s*["'][^"']+["']/gi },
+          { label: "Base URL", regex: /base(url)?\s*[:=]\s*["'][^"']+["']/gi },
+          { label: "API URL", regex: /api(url)?\s*[:=]\s*["'][^"']+["']/gi },
+          { label: "Endpoint", regex: /endpoint\s*[:=]\s*["'][^"']+["']/gi },
+          { label: "Database URL", regex: /database[_-]?url\s*[:=]\s*["'][^"']+["']/gi },
+          { label: "DB URI", regex: /db[_-]?uri\s*[:=]\s*["'][^"']+["']/gi },
+          { label: "Host", regex: /host\s*[:=]\s*["'][^"']+["']/gi },
+          { label: "Port", regex: /port\s*[:=]\s*["']?\d{2,5}["']?/gi },
+          { label: "SMTP", regex: /smtp\s*[:=]\s*["'][^"']+["']/gi },
+          { label: "IMAP", regex: /imap\s*[:=]\s*["'][^"']+["']/gi },
         ];
 
         let result = "";
 
-        // Collect URLs
         const urls = new Set();
         let match;
         while ((match = urlRegex1.exec(content)) !== null) {
@@ -167,9 +185,8 @@
           });
         }
 
-        // Info Disclosure
+        result += `<div class="section-title">🕵️ Info Disclosure Ditemukan:</div>`;
         let leaksFound = false;
-        result += `<div class="section-title">🕵 Info Disclosure Ditemukan:</div>`;
         sensitivePatterns.forEach(({ label, regex }) => {
           const matches = content.match(regex);
           if (matches) {
